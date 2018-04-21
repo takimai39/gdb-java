@@ -14,28 +14,35 @@ class safepoint(gdb.Command):
         print "LWP\tJava Thread Name\tStatus"
         print "--------------------------------------------------------------------"
 
+        jvm_vers = gdb.execute("p JDK_Version::_runtime_version", False, True).split()[-1]
+        jvm_vers = jvm_vers[1:4]
+        # print "%s" % jvm_vers
+
         threadlist = gdb.parse_and_eval("Threads::_thread_list")
         while (str(threadlist) != "0x0"):
+
             safepoint_state = gdb.execute("p ((JavaThread *)" + str(threadlist) + ")->_safepoint_state", False, True ).split()[-1]
             state           = gdb.execute("p ((ThreadSafepointState *)" + str(safepoint_state) + ")->_type", False, True ).split()[-1]
             osthread        = gdb.execute("p ((JavaThread *)" + str(threadlist) + ")->_osthread", False, True ).split()[-1]
             threadObj       = gdb.execute("p ((JavaThread *)" + str(threadlist) + ")->_threadObj", False, True ).split()[-1]
-            metadata        = gdb.execute("p &((Thread *)" + str(threadObj) + ")->_metadata_handles", False, True ).split()[-1]
+            if ( jvm_vers == "1.8" ):
+                metadata        = gdb.execute("p &((Thread *)" + str(threadObj) + ")->_metadata_handles", False, True ).split()[-1]
+            if ( jvm_vers == "1.7" ):
+                metadata        = gdb.execute("p &((Thread *)" + str(threadObj) + ")->_tlab->_slow_refill_waste", False, True ).split()[-1]
             thread_id       = gdb.execute("p ((OSThread *)" + str(osthread) + ")->_thread_id", False, True ).split()[-1]
             pthread_id      = gdb.execute("p ((OSThread *)" + str(osthread) + ")->_pthread_id", False, True ).split()[-1]
 
             thread_name = ""
-            for i in range(80):
-                pos = long(metadata, 16) + i * 2
-                ch =  int(gdb.execute("x/bx " + str(pos), False, True).split()[-1], 16)
-                if 0x20 > ch or 0x7e < ch:
-                    break
-                ch = ("%c" % ch)
-                thread_name = thread_name + ch
+            if ( jvm_vers == "1.7" or jvm_vers == "1.8"):
+                for i in range(80):
+                    pos = long(metadata, 16) + i * 2
+                    ch =  int(gdb.execute("x/bx " + str(pos), False, True).split()[-1], 16)
+                    if 0x20 > ch or 0x7e < ch:
+                        break
+                    ch = ("%c" % ch)
+                    thread_name = thread_name + ch
 
-            print ("LWP %s %-20s	 %s" % (thread_id, thread_name, state))
+            print ("LWP %s %-20s         %s" % (thread_id, thread_name, state))
             threadlist      = gdb.execute("p ((JavaThread *)" + str(threadlist) + ")->_next", False, True ).split()[-1]
 
 safepoint()
-
-
