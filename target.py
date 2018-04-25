@@ -8,8 +8,8 @@ class target(gdb.Command):
 
     def invoke(self, arg, from_tty):
 
-        jvm_vers = gdb.execute("p JDK_Version::_runtime_version", False, True).split()[-1]
-        jvm_vers = jvm_vers[1:4]
+        # jvm_vers = gdb.execute("p JDK_Version::_runtime_version", False, True).split()[-1]
+        # jvm_vers = jvm_vers[1:4]
         # print "%s" % jvm_vers
 
         ciMethod = arg.split()[-1]
